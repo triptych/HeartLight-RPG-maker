@@ -11,6 +11,7 @@ export class MapScene extends HTMLElement {
   #raf = null;
   #lastTime = 0;
   #ready = false;
+  #paused = false;
   #resizeObserver = null;
 
   constructor() {
@@ -98,11 +99,25 @@ export class MapScene extends HTMLElement {
     this.#lastTime = now;
     if (this.#ready) {
       const viewport = { width: this._canvas.width, height: this._canvas.height };
-      this.#runtime.update(dt, viewport);
+      // While paused (a VN scene is stacked on top), skip update() so input
+      // isn't processed and nothing moves/animates, but keep drawing so the
+      // last frame stays visible — the "map dimmed behind the textbox" look
+      // needs a real frame there, not a frozen blank one.
+      if (!this.#paused) this.#runtime.update(dt, viewport);
       this.#runtime.draw(this._ctx, viewport);
     }
     this.#raf = requestAnimationFrame(this.#tick);
   };
+
+  /** Called when a VN scene (or anything else) is pushed on top of this map. */
+  pauseInput() {
+    this.#paused = true;
+  }
+
+  /** Called when whatever was on top of this map is popped back off. */
+  resumeInput() {
+    this.#paused = false;
+  }
 
   /** Exposed for HUD/dev overlays and tests. */
   get runtime() {

@@ -1,7 +1,7 @@
-import { bus } from '../events/bus.js';
 import { state } from '../core/state.js';
 import { input } from '../core/input.js';
 import { loadTileset } from '../core/loader.js';
+import { runScript } from '../core/interpreter.js';
 
 const DIR_VECTORS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const DIRECTIONS = ['up', 'down', 'left', 'right'];
@@ -170,25 +170,11 @@ export class MapRuntime {
   #runEvent(ev) {
     const page = this.#activePage(ev);
     if (!page) return;
-    this.#runCommands(page.commands || []);
-  }
-
-  #runCommands(commands) {
-    for (const cmd of commands) {
-      switch (cmd.cmd) {
-        case 'transfer':
-          bus.emit('map:transfer', { map: cmd.map, x: cmd.x, y: cmd.y });
-          return; // a transfer ends this map's runtime; don't run anything after it
-        case 'flag':
-          state.setFlag(cmd.set, cmd.value !== undefined ? cmd.value : true);
-          break;
-        case 'toast':
-          bus.emit('toast:show', { text: cmd.text });
-          break;
-        default:
-          console.warn(`[map-mode] command "${cmd.cmd}" isn't supported until the shared Phase 2/3 interpreter lands`, cmd);
-      }
-    }
+    // Map events only ever need a handful of commands (flag/toast/transfer/
+    // scene) so no hooks are passed — say/choice/bg/show/hide are VN-only
+    // and require a real stage, which map-mode doesn't own. Fire-and-forget:
+    // nothing here needs to block the map's own update loop on the result.
+    runScript(page.commands || []).catch((err) => console.error('[map-mode] event script failed', ev.id, err));
   }
 
   #isPassable(x, y) {

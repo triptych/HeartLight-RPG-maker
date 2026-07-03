@@ -82,6 +82,23 @@
               ]
             }
           ]
+        },
+        {
+          "id": "maren_intro",
+          "x": 7,
+          "y": 5,
+          "trigger": "action",
+          "solid": true,
+          "pages": [
+            {
+              "commands": [
+                {
+                  "cmd": "scene",
+                  "id": "scene.demo.intro"
+                }
+              ]
+            }
+          ]
         }
       ],
       "music": "",
@@ -154,7 +171,105 @@
       "chapterDecor": {}
     }
   },
-  "scenes": {},
+  "scenes": {
+    "scene.demo.intro": {
+      "commands": [
+        {
+          "cmd": "show",
+          "who": "maren",
+          "expr": "wary",
+          "at": "center"
+        },
+        {
+          "cmd": "say",
+          "who": "Maren",
+          "text": "You're new. Don't expect me to carry your bags."
+        },
+        {
+          "cmd": "say",
+          "who": "Maren",
+          "text": "...That came out harsher than I meant. Old habit."
+        },
+        {
+          "cmd": "choice",
+          "options": [
+            {
+              "text": "“No harm done.”",
+              "then": [
+                {
+                  "cmd": "jump",
+                  "scene": "scene.demo.branch_kind"
+                }
+              ]
+            },
+            {
+              "text": "“Noted. Keep your distance, then.”",
+              "then": [
+                {
+                  "cmd": "jump",
+                  "scene": "scene.demo.branch_curt"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "scene.demo.branch_kind": {
+      "commands": [
+        {
+          "cmd": "show",
+          "who": "maren",
+          "expr": "surprised",
+          "at": "center"
+        },
+        {
+          "cmd": "rapport",
+          "who": "maren",
+          "add": 5
+        },
+        {
+          "cmd": "say",
+          "who": "Maren",
+          "text": "Huh. Most people push back. Maybe you'll do."
+        },
+        {
+          "cmd": "flag",
+          "set": "maren_first_meeting_kind"
+        },
+        {
+          "cmd": "end"
+        }
+      ]
+    },
+    "scene.demo.branch_curt": {
+      "commands": [
+        {
+          "cmd": "show",
+          "who": "maren",
+          "expr": "flat",
+          "at": "center"
+        },
+        {
+          "cmd": "rapport",
+          "who": "maren",
+          "add": 1
+        },
+        {
+          "cmd": "say",
+          "who": "Maren",
+          "text": "Fine by me. Fewer questions, fewer answers I owe."
+        },
+        {
+          "cmd": "flag",
+          "set": "maren_first_meeting_curt"
+        },
+        {
+          "cmd": "end"
+        }
+      ]
+    }
+  },
   "assets": {
     "manifest": {}
   }
