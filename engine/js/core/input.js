@@ -1,13 +1,77 @@
 /**
- * Keyboard/mouse/touch → semantic action mapping. Stubbed in Phase 0; the
- * real input layer (movement, interact, menu navigation, buffering) lands
- * in Phase 1 alongside map mode (GDD Part IX). Placeholder kept here so
- * scene modules can already import a stable `input` object.
+ * Keyboard -> semantic action mapping. Map/battle/menu code asks
+ * "isDown('up')" or "consumePressed('interact')" and never touches a
+ * KeyboardEvent directly (GDD 2.1: input.js turns raw input into actions).
  */
+const KEY_MAP = {
+  ArrowUp: 'up', KeyW: 'up',
+  ArrowDown: 'down', KeyS: 'down',
+  ArrowLeft: 'left', KeyA: 'left',
+  ArrowRight: 'right', KeyD: 'right',
+  Space: 'interact', Enter: 'interact', KeyZ: 'interact',
+  Escape: 'menu',
+};
+
 class InputManager {
-  /** @returns {boolean} always false until Phase 1 wires real key state */
-  isDown(_action) {
+  #down = new Set();
+  #pressedEdge = new Set();
+  #listening = false;
+
+  /** Attach keydown/keyup listeners. Call once at boot. */
+  listen(target = window) {
+    if (this.#listening) return;
+    this.#listening = true;
+    target.addEventListener('keydown', this.#onKeyDown);
+    target.addEventListener('keyup', this.#onKeyUp);
+  }
+
+  /** Remove listeners (tests / teardown). */
+  stop(target = window) {
+    this.#listening = false;
+    target.removeEventListener('keydown', this.#onKeyDown);
+    target.removeEventListener('keyup', this.#onKeyUp);
+  }
+
+  #onKeyDown = (event) => {
+    const action = KEY_MAP[event.code];
+    if (!action) return;
+    if (!this.#down.has(action)) this.#pressedEdge.add(action);
+    this.#down.add(action);
+  };
+
+  #onKeyUp = (event) => {
+    const action = KEY_MAP[event.code];
+    if (!action) return;
+    this.#down.delete(action);
+    this.#pressedEdge.delete(action);
+  };
+
+  /** @param {string} action @returns {boolean} true while the mapped key is held */
+  isDown(action) {
+    return this.#down.has(action);
+  }
+
+  /**
+   * @param {string} action
+   * @returns {boolean} true exactly once per fresh keydown (edge-triggered),
+   * then clears — used for interact and menu so holding doesn't repeat.
+   */
+  consumePressed(action) {
+    if (this.#pressedEdge.has(action)) {
+      this.#pressedEdge.delete(action);
+      return true;
+    }
     return false;
+  }
+
+  /** Simulate a key event directly (tests, or virtual/touch controls later). */
+  simulateDown(action) {
+    if (!this.#down.has(action)) this.#pressedEdge.add(action);
+    this.#down.add(action);
+  }
+
+  simulateUp(action) {
+    this.#down.delete(action);
   }
 }
 

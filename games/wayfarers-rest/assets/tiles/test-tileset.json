@@ -1,0 +1,15 @@
+{
+  "image": "test-tileset.png",
+  "tileSize": 32,
+  "columns": 8,
+  "tiles": {
+    "0": { "terrain": "grass", "passable": true },
+    "1": { "terrain": "wall", "passable": false },
+    "2": { "terrain": "water", "passable": false, "anim": [2, 6, 7], "animSpeed": 350 },
+    "3": { "terrain": "floor", "passable": true },
+    "4": { "terrain": "path", "passable": true },
+    "5": { "terrain": "tree", "passable": false },
+    "6": { "terrain": "water", "passable": false },
+    "7": { "terrain": "water", "passable": false }
+  }
+}

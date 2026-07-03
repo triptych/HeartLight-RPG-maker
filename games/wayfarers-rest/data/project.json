@@ -3,14 +3,27 @@
     "title": "Wayfarer's Rest",
     "version": "0.0.1",
     "engine": "1.0",
-    "startMap": "",
-    "startPos": [0, 0],
+    "startMap": "test-outside",
+    "startPos": [5, 2],
     "chapterVar": "chapter"
   },
   "system": {
-    "elements": ["ember", "frost", "gale", "root", "hearth", "umbral"],
+    "elements": [
+      "ember",
+      "frost",
+      "gale",
+      "root",
+      "hearth",
+      "umbral"
+    ],
     "terms": {},
-    "party": ["rowan", "maren", "pip", "kettle", "sorrel"],
+    "party": [
+      "rowan",
+      "maren",
+      "pip",
+      "kettle",
+      "sorrel"
+    ],
     "tileSize": 32
   },
   "actors": {},
@@ -23,7 +36,126 @@
   "troops": {},
   "recipes": {},
   "states": {},
-  "maps": {},
+  "maps": {
+    "test-outside": {
+      "name": "Outside the Waystation",
+      "size": [10, 8],
+      "tileset": "tiles/test-tileset.json",
+      "layers": {
+        "ground": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 2, 2, 0, 0, 0, 0, 1, 1, 0, 0, 2, 2, 0, 0, 0, 0, 1, 1, 0, 0, 0, 4, 4, 4, 0, 0, 1, 1, 0, 0, 0, 0, 3, 0, 0, 0, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1],
+        "decor": [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5, -1, -1, -1, -1, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+        "overhead": []
+      },
+      "collision": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "events": [
+        {
+          "id": "door_to_inside",
+          "x": 5,
+          "y": 7,
+          "trigger": "touch",
+          "pages": [
+            {
+              "commands": [
+                {
+                  "cmd": "transfer",
+                  "map": "test-inside",
+                  "x": 4,
+                  "y": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "old_signpost",
+          "x": 2,
+          "y": 5,
+          "trigger": "action",
+          "solid": true,
+          "pages": [
+            {
+              "commands": [
+                {
+                  "cmd": "toast",
+                  "text": "A weathered signpost: “Waystation — knock twice.”"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "music": "",
+      "chapterDecor": {}
+    },
+    "test-inside": {
+      "name": "Inside the Waystation",
+      "size": [8, 7],
+      "tileset": "tiles/test-tileset.json",
+      "layers": {
+        "ground": [1, 1, 1, 1, 3, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 3, 1, 1, 1],
+        "decor": [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+        "overhead": []
+      },
+      "collision": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "events": [
+        {
+          "id": "door_to_outside",
+          "x": 4,
+          "y": 6,
+          "trigger": "touch",
+          "pages": [
+            {
+              "commands": [
+                {
+                  "cmd": "transfer",
+                  "map": "test-outside",
+                  "x": 5,
+                  "y": 6
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "the_kettle",
+          "x": 3,
+          "y": 3,
+          "trigger": "action",
+          "solid": true,
+          "pages": [
+            {
+              "commands": [
+                {
+                  "cmd": "flag",
+                  "set": "kettle_greeted",
+                  "value": true
+                },
+                {
+                  "cmd": "toast",
+                  "text": "The kettle rattles suspiciously. ‘...What.’"
+                }
+              ]
+            },
+            {
+              "conditions": {
+                "flag": "kettle_greeted"
+              },
+              "commands": [
+                {
+                  "cmd": "toast",
+                  "text": "‘Yes, yes, I heard you the first time.’"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "music": "",
+      "chapterDecor": {}
+    }
+  },
   "scenes": {},
-  "assets": { "manifest": {} }
+  "assets": {
+    "manifest": {}
+  }
 }

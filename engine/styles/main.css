@@ -32,38 +32,18 @@ body {
   height: 100vh;
 }
 
-#dev-toolbar {
+#hud {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  font-size: 0.85rem;
-  z-index: 1000;
-}
-
-#dev-toolbar button {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid rgba(242, 237, 228, 0.2);
+  top: 0.6rem;
+  left: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  background: rgba(0, 0, 0, 0.5);
   border-radius: var(--radius);
-  padding: 0.35rem 0.7rem;
-  cursor: pointer;
-  transition: background var(--transition);
-}
-
-#dev-toolbar button:hover {
-  background: var(--color-accent);
-}
-
-#depth,
-#status {
-  opacity: 0.8;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+  z-index: 1000;
+  pointer-events: none;
 }
 
 .visually-hidden {

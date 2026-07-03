@@ -1,67 +1,76 @@
 import { bus } from './events/bus.js';
 import { state } from './core/state.js';
 import { sceneStack } from './core/scene-stack.js';
-import './components/scene-placeholder.js';
+import { input } from './core/input.js';
+import { loadProject } from './core/loader.js';
+import './components/map-scene.js';
+import './components/game-toast.js';
 
-const VERSION = '0.0.1-phase0';
+const PROJECT_URL = './data/project.json';
+const ASSETS_BASE = './assets/';
 
-const SCENE_LABELS = {
-  'push-title': 'Title',
-  'push-map': 'Map',
-  'push-battle': 'Battle',
-  'push-vn': 'VN',
-};
-
-function boot() {
+async function boot() {
   const stage = document.getElementById('stage');
   if (!stage) throw new Error('main.js expects a #stage element in index.html');
 
   sceneStack.init(stage);
-  wireDevToolbar();
-  logBusTraffic();
+  input.listen();
+  mountToast();
+  wireHud();
+  wireTransfers();
 
-  bus.emit('game:ready', { version: VERSION });
+  const project = await loadProject(PROJECT_URL);
+  window.__hearthlight = { bus, state, sceneStack, project };
+
+  bus.emit('game:ready', { version: '0.1.0-phase1' });
+
+  const [startX, startY] = project.meta.startPos ?? [0, 0];
+  pushMap(project, project.meta.startMap, startX, startY);
 }
 
-/** Phase 0 exit-test scaffolding: buttons to push/pop scenes by hand. */
-function wireDevToolbar() {
-  const toolbar = document.getElementById('dev-toolbar');
-  if (!toolbar) return;
+function mountToast() {
+  if (document.querySelector('game-toast')) return;
+  document.body.appendChild(document.createElement('game-toast'));
+}
 
-  const status = document.getElementById('status');
-  const depthLabel = document.getElementById('depth');
-  const updateDepth = () => {
-    if (depthLabel) depthLabel.textContent = 'depth: ' + sceneStack.depth;
-  };
+function pushMap(project, mapId, x, y) {
+  const el = document.createElement('map-scene');
+  el.project = project;
+  el.setAttribute('map', mapId);
+  el.setAttribute('start-x', String(x));
+  el.setAttribute('start-y', String(y));
+  el.setAttribute('assets-base', ASSETS_BASE);
+  sceneStack.push('Map', el);
+}
 
-  toolbar.addEventListener('click', (event) => {
-    const action = event.target && event.target.dataset ? event.target.dataset.action : null;
-    if (!action) return;
+/** A map event's `transfer` command asks for a map swap; handled here since
+ * map-scene stays ignorant of the scene stack (GDD 2.2: bus, not direct refs). */
+function wireTransfers() {
+  bus.on('map:transfer', ({ detail }) => {
+    const project = window.__hearthlight.project;
+    sceneStack.pop();
+    pushMap(project, detail.map, detail.x, detail.y);
+  });
+}
 
-    if (action === 'pop') {
-      sceneStack.pop();
-    } else {
-      const label = SCENE_LABELS[action];
-      if (!label) return;
-      const el = document.createElement('scene-placeholder');
-      el.setAttribute('type', label);
-      sceneStack.push(label, el);
-    }
-    updateDepth();
+/** Minimal Phase 1 dev readout: map name + tile position, for eyeballing state. */
+function wireHud() {
+  const hud = document.getElementById('hud');
+  if (!hud) return;
+
+  bus.on('scene:push', () => updateHud(hud));
+  bus.on('game:ready', (e) => {
+    hud.dataset.version = e.detail.version;
   });
 
-  bus.on('game:ready', (event) => {
-    if (status) status.textContent = 'game:ready - v' + event.detail.version;
-  });
+  setInterval(() => updateHud(hud), 200);
 }
 
-function logBusTraffic() {
-  bus.on('scene:push', (e) => console.log('[scene:push]', e.detail));
-  bus.on('scene:pop', (e) => console.log('[scene:pop]', e.detail));
-  bus.on('state:flag', (e) => console.log('[state:flag]', e.detail));
+function updateHud(hud) {
+  const scene = sceneStack.top?.element;
+  if (!scene || scene.tagName !== 'MAP-SCENE' || !scene.runtime?.mapData) return;
+  const { x, y } = scene.runtime.player;
+  hud.textContent = `${scene.runtime.mapName} — (${x}, ${y})`;
 }
-
-// Expose for manual console poking during Phase 0 development only.
-window.__hearthlight = { bus, state, sceneStack };
 
 boot();
