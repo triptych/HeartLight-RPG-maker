@@ -44,12 +44,21 @@ function pushMap(project, mapId, x, y) {
 }
 
 /** A map event's `transfer` command asks for a map swap; handled here since
- * map-scene stays ignorant of the scene stack (GDD 2.2: bus, not direct refs). */
+ * map-scene stays ignorant of the scene stack (GDD 2.2: bus, not direct refs).
+ * If a <map-scene> is already on top, swap its map in place (switchMap) rather
+ * than pop+push — that avoids tearing down and recreating the canvas on every
+ * door, which caused a visible flash between the old frame and the new one's
+ * first draw. Pop+push is still the right move if something else is on top
+ * (e.g. a VN scene, once that exists). */
 function wireTransfers() {
   bus.on('map:transfer', ({ detail }) => {
     const project = window.__hearthlight.project;
-    sceneStack.pop();
-    pushMap(project, detail.map, detail.x, detail.y);
+    const top = sceneStack.top?.element;
+    if (top?.tagName === 'MAP-SCENE') {
+      top.switchMap(detail.map, detail.x, detail.y);
+    } else {
+      pushMap(project, detail.map, detail.x, detail.y);
+    }
   });
 }
 

@@ -1,4 +1,5 @@
 import { MapRuntime } from '../modes/map-mode.js';
+import { input } from '../core/input.js';
 
 /**
  * <map-scene map="test-outside" start-x="5" start-y="9"> — owns the canvas
@@ -32,25 +33,17 @@ export class MapScene extends HTMLElement {
   }
 
   async connectedCallback() {
-    const mapId = this.getAttribute('map');
-    const startX = Number(this.getAttribute('start-x') ?? 0);
-    const startY = Number(this.getAttribute('start-y') ?? 0);
-
     this.#resize();
     if (typeof ResizeObserver !== 'undefined') {
       this.#resizeObserver = new ResizeObserver(() => this.#resize());
       this.#resizeObserver.observe(this);
     }
 
-    await this.#runtime.load({
-      project: this._project,
-      mapId,
-      assetsBaseUrl: this.getAttribute('assets-base') ?? 'assets/',
-      startX,
-      startY,
-    });
+    const mapId = this.getAttribute('map');
+    const startX = Number(this.getAttribute('start-x') ?? 0);
+    const startY = Number(this.getAttribute('start-y') ?? 0);
+    await this.#loadMap(mapId, startX, startY);
 
-    this.#ready = true;
     this.#lastTime = performance.now();
     this.#raf = requestAnimationFrame(this.#tick);
   }
@@ -58,6 +51,40 @@ export class MapScene extends HTMLElement {
   disconnectedCallback() {
     if (this.#raf) cancelAnimationFrame(this.#raf);
     this.#resizeObserver?.disconnect();
+  }
+
+  /**
+   * Load a different map into this same element/canvas/rAF loop — used for
+   * in-place map-to-map transfers (a door) so the element is never torn down
+   * and recreated. Tearing it down meant a real (if brief) gap between the
+   * old canvas disappearing and the new one's first draw(), during which the
+   * shadow host's background showed through as a flash — worse the faster
+   * you cross back and forth. update() is paused (#ready = false) for the
+   * duration so the canvas just keeps showing its last frame instead of
+   * going blank, then swaps cleanly to the new map's first draw().
+   * @param {string} mapId
+   * @param {number} startX
+   * @param {number} startY
+   */
+  async switchMap(mapId, startX, startY) {
+    await this.#loadMap(mapId, startX, startY);
+  }
+
+  async #loadMap(mapId, startX, startY) {
+    this.#ready = false;
+    // A direction held or an interact queued right as the player crosses a
+    // door shouldn't carry over and fire against the new map (stray moves,
+    // stray event triggers) — see engine/js/core/input.js reset().
+    input.reset();
+    await this.#runtime.load({
+      project: this._project,
+      mapId,
+      assetsBaseUrl: this.getAttribute('assets-base') ?? 'assets/',
+      startX,
+      startY,
+    });
+    this.setAttribute('map', mapId);
+    this.#ready = true;
   }
 
   #resize() {

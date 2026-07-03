@@ -48,5 +48,26 @@ water/floor/path/tree), and two maps embedded in `project.json`
 component, superseded by `map-scene.js` — safe to delete, left renamed
 rather than removed.
 
+### Known-fixed issues
+
+- Solid events (signpost, kettle) had no sprite and looked like plain
+  ground tiles you mysteriously couldn't walk onto — `map-mode.js` now
+  draws a placeholder prop marker for any solid/action event (doors stay
+  marker-free, cued by their floor tile instead).
+- Crossing a door caused a visible flash. Root cause: every transfer tore
+  down and recreated the whole `<map-scene>` element, and there's an async
+  gap (tileset fetch) before the new canvas's first draw — during that gap
+  the canvas was blank, showing the shadow host's dark background through.
+  Fixed: `map-scene.js` now has a `switchMap()` that swaps map data in
+  place on the same element/canvas, so the last frame just stays on screen
+  until the new one's first draw. `main.js`'s transfer handler uses it
+  instead of pop+push when a `<map-scene>` is already on top.
+- Alongside that, `input.js` gained `reset()`, called at the start of every
+  map switch: clears held keys and queued presses so a direction held or an
+  interact queued right as you cross a door can't fire against the new map
+  (stray moves, stray event triggers). Trade-off: holding a direction
+  through a door won't carry momentum into the new map — you'll need to
+  press again. Revisit if that feels bad in practice.
+
 Next up (Phase 2, GDD Part IX): VN mode — script interpreter, stage/textbox/
 choices, flags/vars, save/load — playable as a 3-scene branch over a live map.
