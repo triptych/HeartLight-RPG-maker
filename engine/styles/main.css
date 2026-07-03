@@ -1,0 +1,76 @@
+:root {
+  --color-bg: #14110f;
+  --color-surface: #241f3a;
+  --color-text: #f2ede4;
+  --color-accent: #d98e4a;
+  --radius: 8px;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --transition: 160ms ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  overflow: hidden;
+}
+
+#stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+#dev-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  font-size: 0.85rem;
+  z-index: 1000;
+}
+
+#dev-toolbar button {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid rgba(242, 237, 228, 0.2);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+#dev-toolbar button:hover {
+  background: var(--color-accent);
+}
+
+#depth,
+#status {
+  opacity: 0.8;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

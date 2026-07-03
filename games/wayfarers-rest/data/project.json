@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "Wayfarer's Rest",
+    "version": "0.0.1",
+    "engine": "1.0",
+    "startMap": "",
+    "startPos": [0, 0],
+    "chapterVar": "chapter"
+  },
+  "system": {
+    "elements": ["ember", "frost", "gale", "root", "hearth", "umbral"],
+    "terms": {},
+    "party": ["rowan", "maren", "pip", "kettle", "sorrel"],
+    "tileSize": 32
+  },
+  "actors": {},
+  "classes": {},
+  "skills": {},
+  "items": {},
+  "weapons": {},
+  "armors": {},
+  "enemies": {},
+  "troops": {},
+  "recipes": {},
+  "states": {},
+  "maps": {},
+  "scenes": {},
+  "assets": { "manifest": {} }
+}
