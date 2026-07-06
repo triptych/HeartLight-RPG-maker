@@ -26,16 +26,212 @@
     ],
     "tileSize": 32
   },
-  "actors": {},
+  "actors": {
+    "rowan": {
+      "name": "Rowan",
+      "class": "keeper",
+      "level": 1,
+      "stats": {
+        "maxHP": 30,
+        "maxSP": 10,
+        "ATK": 8,
+        "DEF": 5,
+        "MAG": 4,
+        "RES": 4,
+        "SPD": 6,
+        "LCK": 5
+      },
+      "portraits": {},
+      "sprite": "",
+      "equip": {},
+      "rapportScenes": [],
+      "skills": []
+    },
+    "maren": {
+      "name": "Maren",
+      "class": "warden",
+      "level": 1,
+      "stats": {
+        "maxHP": 40,
+        "maxSP": 6,
+        "ATK": 10,
+        "DEF": 8,
+        "MAG": 2,
+        "RES": 5,
+        "SPD": 5,
+        "LCK": 3
+      },
+      "portraits": {},
+      "sprite": "",
+      "equip": {},
+      "rapportScenes": [],
+      "skills": [
+        "warden_bash"
+      ]
+    }
+  },
   "classes": {},
-  "skills": {},
-  "items": {},
+  "skills": {
+    "warden_bash": {
+      "name": "Warden's Bash",
+      "cost": 2,
+      "target": "one",
+      "formula": "phys",
+      "pow": 1.4,
+      "element": null,
+      "status": {
+        "id": "chilled",
+        "chance": 1,
+        "duration": 2
+      },
+      "comboWith": null,
+      "rapportReq": 0,
+      "anim": ""
+    }
+  },
+  "items": {
+    "bread": {
+      "name": "Bread",
+      "type": "dish",
+      "price": 0,
+      "effect": {},
+      "tastes": [],
+      "desc": "Simple travel bread. Some things just want to be shared."
+    },
+    "travel_biscuit": {
+      "name": "Travel Biscuit",
+      "type": "consumable",
+      "price": 0,
+      "effect": {
+        "heal": 10
+      },
+      "tastes": [],
+      "desc": "Dense, dry, dependable."
+    }
+  },
   "weapons": {},
   "armors": {},
-  "enemies": {},
-  "troops": {},
+  "enemies": {
+    "dust_wisp": {
+      "name": "Dust-wisp",
+      "stats": {
+        "maxHP": 18,
+        "ATK": 6,
+        "DEF": 2,
+        "MAG": 0,
+        "RES": 2,
+        "SPD": 4,
+        "LCK": 2
+      },
+      "ai": [
+        {
+          "weight": 10,
+          "skill": null
+        }
+      ],
+      "tastes": {
+        "loves": [],
+        "likes": [],
+        "hates": []
+      },
+      "befriend": null,
+      "drops": [],
+      "xp": 5,
+      "gold": 2
+    },
+    "cellar_hob": {
+      "name": "Cellar-Hob",
+      "stats": {
+        "maxHP": 20,
+        "ATK": 5,
+        "DEF": 4,
+        "MAG": 0,
+        "RES": 3,
+        "SPD": 3,
+        "LCK": 4
+      },
+      "ai": [
+        {
+          "weight": 10,
+          "skill": null
+        }
+      ],
+      "tastes": {
+        "loves": [
+          "bread"
+        ],
+        "likes": [],
+        "hates": []
+      },
+      "befriend": {
+        "meter": 100,
+        "reward": "cellar_hob_handyman",
+        "inhabitant": null
+      },
+      "drops": [],
+      "xp": 8,
+      "gold": 0
+    }
+  },
+  "troops": {
+    "test_dust_wisps": {
+      "members": [
+        {
+          "enemy": "dust_wisp"
+        },
+        {
+          "enemy": "dust_wisp"
+        }
+      ],
+      "formation": [],
+      "scripts": []
+    },
+    "test_cellar_hob": {
+      "members": [
+        {
+          "enemy": "cellar_hob"
+        }
+      ],
+      "formation": [],
+      "scripts": []
+    }
+  },
   "recipes": {},
-  "states": {},
+  "states": {
+    "poison": {
+      "name": "Poisoned",
+      "tick": {
+        "hp": -3
+      },
+      "mods": {},
+      "duration": 3
+    },
+    "warm": {
+      "name": "Warm",
+      "tick": {
+        "hp": 5
+      },
+      "mods": {},
+      "duration": 3
+    },
+    "chilled": {
+      "name": "Chilled",
+      "tick": {},
+      "mods": {
+        "SPD": -3
+      },
+      "duration": 2
+    },
+    "inspired": {
+      "name": "Inspired",
+      "tick": {},
+      "mods": {
+        "ATK": 3,
+        "MAG": 3
+      },
+      "duration": 3
+    }
+  },
   "maps": {
     "test-outside": {
       "name": "Outside the Waystation",
@@ -95,6 +291,40 @@
                 {
                   "cmd": "scene",
                   "id": "scene.demo.intro"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "training_dummies",
+          "x": 3,
+          "y": 1,
+          "trigger": "action",
+          "solid": true,
+          "pages": [
+            {
+              "commands": [
+                {
+                  "cmd": "battle",
+                  "troop": "test_dust_wisps"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cellar_hatch",
+          "x": 6,
+          "y": 6,
+          "trigger": "action",
+          "solid": true,
+          "pages": [
+            {
+              "commands": [
+                {
+                  "cmd": "battle",
+                  "troop": "test_cellar_hob"
                 }
               ]
             }

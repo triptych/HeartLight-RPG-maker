@@ -13,7 +13,7 @@ Repo layout (per `hearthlight-gdd.md`, Part X decision):
 Locked decisions (2026-07-03): names as-is, 32px tiles, 4-directional movement,
 single-repo layout as above.
 
-## Status: Phase 2 (VN mode)
+## Status: Phase 3.5 (title screen, save/load menu, touch support)
 
 Needs to be served over http(s), not opened via `file://` — the browser
 blocks `fetch()` of `project.json`/the tileset under the file protocol.
@@ -119,4 +119,125 @@ Plus the full 13-assertion Phase 0/1 regression suite re-run clean against
 the refactored map-mode.js (no `bus`/old `#runCommands` switch — it now
 calls the shared interpreter too).
 
-Next up (Phase 3, GDD Part IX): battle mode.
+### Phase 3: battle mode
+
+Two more interactables outside the waystation trigger test fights: the
+training dummies (a couple tiles up-left of spawn) start a straight fight
+against two Dust-wisps; the cellar hatch (down-right, near the water)
+starts a fight against a lone Cellar-Hob who can be talked down instead of
+beaten — feed it Bread (loved) with the Serve command and its hostility
+meter fills instead of its HP draining. You'll need Bread in inventory
+first; there's no shop/pickup wired up yet, so for now that's a
+`state.addItem('bread', 1)` from the console if you want to try it
+in-browser rather than through the automated test.
+
+New engine pieces: `engine/js/data/formulas.js` (pure damage/heal/crit/
+turn-order/flee-chance functions — deliberately side-effect-free so Phase
+8's "batch-simulated battles for balance" can run them in a loop with no
+engine bootstrap), `engine/js/modes/battle-mode.js` (`BattleRuntime`: SPD-
+based turn order recomputed each round, Attack/Skill/Item/Guard/Serve/Flee
+commands, status effects that tick at the end of the affected combatant's
+own turn, weighted enemy AI with `hpBelow`-style condition gates, the
+Befriend meter, and an injectable `rng` for deterministic testing),
+`engine/js/components/battle-hud.js` (`<battle-hud>`: combatant rows with
+HP/SP bars and status badges, the command menu, a scrolling log — pure DOM,
+no canvas yet; placeholder battler "art" is just name tags, same spirit as
+the map's placeholder prop markers), `engine/js/components/battle-scene.js`
+(`<battle-scene>`, owns the runtime + hud and pushes 'Battle' onto the
+scene stack, pausing/resuming whatever's beneath exactly like `vn-scene`
+does). The interpreter gained a `battle` command that fires `battle:start`
+the same non-blocking way `scene` fires `vn:play`.
+
+Test data added to `project.json`: actors Rowan and Maren with flat combat
+stats (no class-curve leveling or equipment yet — that's Studio/database
+territory, Phase 4+), one skill (Maren's Warden's Bash, which also applies
+Chilled), two items (Bread — a dish — and a Travel Biscuit consumable),
+two enemies (Dust-wisp, plain; Cellar-Hob, befriendable via Bread), two
+troops, and the four status defs referenced by GDD 3.4 (poison, warm,
+chilled, inspired) — only `chilled` is actually triggered by current
+content, the other three are implemented and tick correctly but untested
+by real content yet.
+
+Deferred (GDD 3.3–3.6, Studio/content territory) — not yet built: XP and
+leveling, persistent party HP/SP across battles, equipment/weapons/armor
+effects, the full skill roster and rapport-combo skills, cooking/recipes,
+shops, scripted/boss troop turns (`troops[].scripts`, incl. mid-battle VN
+beats — the architecture already supports stacking a VN scene on top of a
+Battle scene, just nothing triggers one yet), elemental affinities beyond
+a bare multiplier lookup, and a real result screen (rewards currently
+collapse to a single toast).
+
+Exit test: two suites. A pure-logic unit suite (`BattleRuntime` imported
+directly, no DOM) — 17 assertions covering win-by-defeat, loss, a rigged
+flee success, befriending the Cellar-Hob with the right dish, a wrong-dish
+offering barely moving the meter, status application (Chilled) and its
+turn-order effect, and guard's damage reduction. Plus a full-stack DOM
+integration test — walk to the training dummies, interact, confirm
+`battle:start` fires and `<battle-scene>` mounts (stack depth 2, map
+paused), click through the real HUD's Attack menu turn by turn to defeat
+both Dust-wisps, confirm the victory banner, `battle:done`, the scene
+popping, and map input resuming. Both suites green, plus the full
+Phase 0–2 regression suite (30 assertions) re-run clean.
+
+### Phase 3.5: title screen, save/load menu, touch support
+
+Not a GDD roadmap phase — infrastructure Andrew asked for before moving on
+to Phase 4, since a few real gaps had built up: the scene stack's spine
+(GDD 2.2) always started `[Title] → [Map] → ...` but boot() went straight
+to the map; save/load only existed as an invisible F5/F9 quickslot; and
+there was no way to play on a touch device at all.
+
+**Title screen.** `engine/js/components/title-scene.js` (`<title-scene>`):
+game title, New Game, and Continue (shown only once a named save exists).
+boot() now pushes this first; New Game resets state and starts at
+meta.startMap/startPos, Continue applies the most recently-saved named
+snapshot. Kept deliberately minimal — no Settings/slot-picker on the title
+screen itself, just the entry point.
+
+**Save/load menu.** Escape now opens `engine/js/components/game-menu.js`
+(`<game-menu>`) over the map — same pause/resume pattern as VN/Battle,
+GDD 2.1's `game-menu.js`, save/load slice only (party/items menus need
+inventory UI that doesn't exist yet). Three named slots plus a read-only
+Autosave slot, Download Save (exports the live state as a `.json` file)
+and Load Save File (reads one back), built on `saves.js`'s
+already-existing `exportSaveFile`/`parseSaveFile` primitives from Phase 2
+— those just weren't wired to anything before. Autosave fires after every
+map transfer and whenever control returns to the map from a VN scene or
+battle — checkpointed at meaningful moments, not on a timer. F5/F9
+quicksave/quickload still work independently, writing to their own
+`quick` slot.
+
+**Touch support.** `engine/js/components/touch-controls.js`
+(`<touch-controls>`): an on-screen d-pad + interact button, visible only
+while a Map scene is on top (VN/Battle/Menu/Title already have real DOM
+buttons, which take taps for free) and hidden entirely on mouse-primary
+desktops via `@media (hover: hover) and (pointer: fine)` rather than
+one-time JS feature detection, so a hybrid device reacts correctly if its
+input mode changes. Uses Pointer Events with pointer capture so a finger
+sliding off a button releases cleanly. Alongside it, a responsive-CSS pass:
+`battle-hud.js` rows wrap instead of overflowing under 480px, `#hud` picks
+up safe-area insets and shrinks on small phones, and `#stage` uses `100dvh`
+so mobile browser chrome (the address bar showing/hiding) doesn't cause
+layout jumps. VN/battle/menu/title were already built with `vw`/`clamp()`
+sizing from the start, so those needed no changes.
+
+Exit test: 21 new assertions — title screen hides Continue with no saves
+and shows the right title, New Game reaches the start map, touch-controls
+is hidden/shown correctly across scene types, a d-pad tap actually drives
+movement (via the same `input.simulateDown/Up` the keyboard uses — proven
+by tracing the real event path, not by calling it directly), Escape opens
+the menu and pauses the map, save-to-slot and load-from-slot round-trip
+correctly, Download Save doesn't throw, a simulated Load-Save-File
+round-trips state and position, and a fresh `<title-scene>` correctly
+offers and applies Continue once a named save exists. One real bug caught
+here: the save-slot rows were also rendering a silently-unbound Load
+button (copy-paste in `#row()`), invisible until a test queried the whole
+shadow root instead of scoping to the Load section specifically — fixed
+by only rendering the button each section actually binds a listener for.
+Plus the full existing 59-assertion Phase 0–3 regression suite re-run
+clean (all four harnesses updated to click through the new title screen
+first, since boot() no longer lands directly on the map).
+
+Next up (Phase 4, GDD Part IX): Hearthlight Studio A — shell, project I/O,
+Database tabs. Exit test: author an item→equip→battle round-trip with no
+hand-written JSON.

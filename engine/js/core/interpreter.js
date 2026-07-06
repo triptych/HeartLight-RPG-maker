@@ -10,9 +10,9 @@ import { state } from './state.js';
  * passes hooks that drive the stage/textbox/choices UI).
  *
  * Supported now: say, choice, if, bg, show, hide, flag, var, rapport,
- * toast, transfer, scene, wait, label, goto, jump, call, end.
- * Deferred — need systems that don't exist yet (items/battle/shops/etc.):
- * move, expr, cg, give, take, gold, battle, shop, cook, tint, flash,
+ * toast, transfer, scene, battle, wait, label, goto, jump, call, end.
+ * Deferred — need systems that don't exist yet (items/shops/etc.):
+ * move, expr, cg, give, take, gold, shop, cook, tint, flash,
  * weather, music, sfx, save.
  *
  * @param {Array<object>} commands
@@ -110,6 +110,12 @@ async function runOne(cmd, hooks) {
     case 'scene':
       // A map event's "show scene" (GDD 3.2) — hands off to VN mode.
       bus.emit('vn:play', { scene: cmd.id ?? cmd.scene });
+      return;
+    case 'battle':
+      // GDD 3.2/3.4 — hands off to battle mode the same non-blocking way
+      // 'scene' hands off to VN mode: fire-and-forget over the bus, no
+      // return point here (battle-mode's own end pops itself off the stack).
+      bus.emit('battle:start', { troop: cmd.troop ?? cmd.id });
       return;
     case 'wait':
       await new Promise((resolve) => setTimeout(resolve, cmd.ms ?? 0));

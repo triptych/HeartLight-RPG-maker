@@ -30,12 +30,15 @@ body {
   position: relative;
   width: 100vw;
   height: 100vh;
+  /* dvh accounts for mobile browser chrome (address bar) showing/hiding;
+     vh is the fallback for browsers that don't support it yet. */
+  height: 100dvh;
 }
 
 #hud {
   position: fixed;
-  top: 0.6rem;
-  left: 0.75rem;
+  top: calc(0.6rem + env(safe-area-inset-top, 0px));
+  left: calc(0.75rem + env(safe-area-inset-left, 0px));
   padding: 0.3rem 0.6rem;
   background: rgba(0, 0, 0, 0.5);
   border-radius: var(--radius);
@@ -44,6 +47,19 @@ body {
   opacity: 0.85;
   z-index: 1000;
   pointer-events: none;
+  max-width: min(70vw, 320px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Small phones in portrait: the HUD text can get long ("Map Name — (x, y)");
+   shrink it rather than let it clip mid-word. */
+@media (max-width: 420px) {
+  #hud {
+    font-size: 0.7rem;
+    max-width: 60vw;
+  }
 }
 
 .visually-hidden {
