@@ -1,0 +1,14 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  font-family: system-ui, sans-serif;
+  background: #14110f;
+  color: #f2ede4;
+  overflow: hidden;
+}
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}

@@ -5,7 +5,8 @@ Repo layout (per `hearthlight-gdd.md`, Part X decision):
 - `engine/` — Hearthlight Engine. Vanilla HTML/CSS/JS runtime (map, battle, VN
   modes, custom elements, event bus). One consumer today (`games/wayfarers-rest`),
   designed to support more later.
-- `studio/` — Hearthlight Studio, the browser-based editor. Not started (Phase 4+).
+- `studio/` — Hearthlight Studio, the browser-based editor. Shell + Database
+  tabs as of Phase 4; Maps/Scenes/Assets/Playtest tabs are later phases.
 - `games/wayfarers-rest/` — *Wayfarer's Rest*, the first game: `data/project.json`
   (the database/maps/scenes) and `assets/`. References the engine via relative
   path rather than bundling a copy.
@@ -13,7 +14,7 @@ Repo layout (per `hearthlight-gdd.md`, Part X decision):
 Locked decisions (2026-07-03): names as-is, 32px tiles, 4-directional movement,
 single-repo layout as above.
 
-## Status: Phase 3.5 (title screen, save/load menu, touch support)
+## Status: Phase 4 (Hearthlight Studio A)
 
 Needs to be served over http(s), not opened via `file://` — the browser
 blocks `fetch()` of `project.json`/the tileset under the file protocol.
@@ -238,6 +239,66 @@ Plus the full existing 59-assertion Phase 0–3 regression suite re-run
 clean (all four harnesses updated to click through the new title screen
 first, since boot() no longer lands directly on the map).
 
-Next up (Phase 4, GDD Part IX): Hearthlight Studio A — shell, project I/O,
-Database tabs. Exit test: author an item→equip→battle round-trip with no
-hand-written JSON.
+### Phase 4: Hearthlight Studio A
+
+A second web app, `studio/index.html` — same scaffold pattern as the
+runtime (GDD 6.0/6.1): its own tiny event bus (a deliberate separate copy,
+not a shared import — Studio and the runtime never share a running
+process, even once Playtest puts the runtime in an iframe), `<app-modal>`
+(prompt/confirm/alert, used instead of native dialogs), `<app-tabs>` (top
+level: Database/Maps/Scenes/Assets/Playtest — only Database is live this
+phase, the rest render disabled so the eventual shape of the app is
+visible from day one), and `<app-layout>` tying it together with Open
+Project / New Project / Save in the header.
+
+**Project I/O** (`studio/js/core/project-io.js`, GDD 6.2): the File System
+Access API when available (Chrome/Edge — Andrew's dev environment) keeps a
+live file handle so repeated saves write straight back into the project
+folder; a file-input-plus-download fallback covers browsers without it.
+The File System Access path itself needs a real browser to verify (jsdom
+has no polyfill for it) — everything downstream of "here's a project
+object" is covered by the automated suite instead.
+
+**Database tabs** (`studio/js/components/entity-editor.js` +
+`studio/js/data/schemas.js`): one generic, schema-driven component — list
+pane (create/select/delete entries) + form pane (typed fields per Part VII
+schema) + JSON pane (mirrors the form live; a "Apply JSON →" button pushes
+edits back the other direction, deliberately not live-synced on every
+keystroke so it doesn't fight someone mid-edit typing invalid JSON) —
+reused across all 11 collections (Actors, Classes, Skills, Items, Weapons,
+Armor, Enemies, Troops, Recipes, States, System) rather than one bespoke
+editor per type. Per the GDD's own editor-gold-plating risk valve, Actors/
+Items/Weapons/Armor get full structured fields (they're what the exit test
+runs through); Classes/Skills/Enemies/Troops/Recipes/States lean on the
+`json` field type for their more open-ended sub-shapes (AI lists,
+learnsets, stat curves) rather than bespoke widgets for every nested
+shape.
+
+**Equipment now does something in battle.** `battle-mode.js` gained
+`#applyEquipment()`: an actor's equipped weapon's `atk` and armor/charm's
+`def` now layer onto base stats when a battle loads. This was a real gap
+from Phase 3 (equipment effects were explicitly deferred) — the exit test
+needs equipping something to actually matter, so this is the one engine
+change that came with the editor.
+
+Exit test: author a weapon and equip it on Rowan entirely by driving the
+real `<entity-editor>` component — click "+ New", type into the rendered
+Name/ATK form fields, switch to the Actors tab, pick the new weapon from
+Rowan's equip dropdown — with zero hand-written JSON anywhere. Confirm the
+JSON pane mirrors the form-authored weapon live. Then feed that exact
+in-memory project object into a real `BattleRuntime` and confirm Rowan's
+effective ATK includes the weapon bonus and that an equipped Rowan clears
+the same test fight in no more turns than an unequipped one. 12 new
+assertions, plus the full existing 80-assertion Phase 0–3.5 regression
+suite re-run clean (the equipment change is additive — no equip data means
+no stat change, so nothing already built could have broken).
+
+Deferred (Studio, GDD Part VI) — not yet built: Maps tab (Phase 5), Scenes
+tab + live preview + playtest-in-iframe (Phase 6), Assets tab, weapon/armor
+`trait` effects (element/statusOnHit/serveBonus — the stat-bonus half of
+equipment works, the trait half doesn't yet), and any schema validation
+beyond "is this JSON parseable."
+
+Next up (Phase 5, GDD Part IX): Hearthlight Studio B — the map editor
+(paint/layers/collision/events, undo). Exit test: build the Inn map
+entirely in-editor.

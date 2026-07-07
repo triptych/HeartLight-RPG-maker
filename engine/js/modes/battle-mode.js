@@ -59,11 +59,31 @@ export class BattleRuntime {
 
   #makeParty(id, def) {
     if (!def) throw new Error(`[battle] unknown actor: ${id}`);
+    const stats = this.#applyEquipment({ ...def.stats }, def.equip);
     return {
       side: 'party', id, name: def.name,
-      stats: { ...def.stats }, hp: def.stats.maxHP, sp: def.stats.maxSP,
+      stats, hp: stats.maxHP, sp: stats.maxSP,
       statuses: [], guarding: false, skills: def.skills || [],
     };
+  }
+
+  /**
+   * Layer weapon ATK / armor DEF onto base stats (GDD Part VII schema:
+   * `weapons: {atk}`, `armors: {def, slot}`). This is deliberately the
+   * whole equipment system for now — `trait` (element/statusOnHit/
+   * serveBonus per GDD 3.5) isn't applied yet, since nothing in the engine
+   * reads a trait shape yet either; adding trait effects later shouldn't
+   * need to touch this method's callers, just this one spot.
+   */
+  #applyEquipment(stats, equip) {
+    if (!equip) return stats;
+    const weapon = equip.weapon && this.project.weapons?.[equip.weapon];
+    const armor = equip.armor && this.project.armors?.[equip.armor];
+    const charm = equip.charm && this.project.armors?.[equip.charm];
+    if (weapon?.atk) stats.ATK += weapon.atk;
+    if (armor?.def) stats.DEF += armor.def;
+    if (charm?.def) stats.DEF += charm.def;
+    return stats;
   }
 
   #makeEnemy(enemyId, index, def) {
