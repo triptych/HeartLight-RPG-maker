@@ -1,6 +1,7 @@
 import './app-tabs.js';
 import './app-modal.js';
 import './entity-editor.js';
+import './map-editor-view.js';
 import { bus } from '../events/bus.js';
 import { openProject, blankProject, projectIoSupportsFSAccess } from '../core/project-io.js';
 import { SCHEMAS, TAB_ORDER } from '../data/schemas.js';
@@ -9,16 +10,19 @@ const TOP_TABS = ['Database', 'Maps', 'Scenes', 'Assets', 'Playtest'];
 
 /**
  * <app-layout> — the Studio shell (GDD 6.0/6.1): header with Open/Save,
- * the top-level tab strip (only "Database" is live this phase — Maps is
- * Phase 5, Scenes/Playtest are Phase 6, Assets is later), and inside
- * Database a second `<app-tabs>` strip for the 11 Part VII collections,
- * all driven by one persistent `<entity-editor>` whose entity type gets
- * swapped rather than recreating the editor per tab.
+ * the top-level tab strip ("Database" and "Maps" are live as of Phase 5 —
+ * Scenes/Playtest are Phase 6, Assets is later). Inside Database a second
+ * `<app-tabs>` strip drives the 11 Part VII collections through one
+ * persistent `<entity-editor>`; Maps mounts a persistent `<map-editor-view>`.
+ * Both top-level panes are built once per project load and kept alive
+ * (just hidden) when switching tabs, so map-editor undo history and
+ * in-progress entity-editor state survive a tab switch.
  */
 export class AppLayout extends HTMLElement {
   #project = null;
   #saveFn = null;
   #dirty = false;
+  #currentTopTab = 'Database';
 
   constructor() {
     super();
@@ -43,7 +47,7 @@ export class AppLayout extends HTMLElement {
         <button class="new-btn">New Project</button>
         <button class="save-btn" disabled>Save</button>
       </header>
-      <app-tabs class="top-tabs" tabs="${TOP_TABS.join(',')}" active="Database" enabled="Database"></app-tabs>
+      <app-tabs class="top-tabs" tabs="${TOP_TABS.join(',')}" active="Database" enabled="Database,Maps"></app-tabs>
       <main></main>
       <app-modal></app-modal>
     `;
@@ -56,6 +60,7 @@ export class AppLayout extends HTMLElement {
     this._shadow.querySelector('.open-btn').addEventListener('click', () => this.#openProject());
     this._shadow.querySelector('.new-btn').addEventListener('click', () => this.#newProject());
     this._saveBtn.addEventListener('click', () => this.#save());
+    this._shadow.querySelector('.top-tabs').addEventListener('tab-change', (e) => this.#showTopTab(e.detail.tab));
   }
 
   connectedCallback() {
@@ -69,9 +74,9 @@ export class AppLayout extends HTMLElement {
       this.#project = project;
       this.#saveFn = save;
       this.#markClean();
-      this.#projectNameEl.textContent = ` — ${project.meta?.title ?? 'untitled'}`;
+      this._projectNameEl.textContent = ` — ${project.meta?.title ?? 'untitled'}`;
       bus.emit('project:loaded', { project });
-      this.#mountDatabase();
+      this.#mountProject();
     } catch (err) {
       if (err?.name !== 'AbortError') await this._modal.alert(`Couldn't open that file: ${err.message}`);
     }
@@ -84,7 +89,7 @@ export class AppLayout extends HTMLElement {
     this.#markClean();
     this._projectNameEl.textContent = ' — untitled (unsaved)';
     bus.emit('project:loaded', { project: this.#project });
-    this.#mountDatabase();
+    this.#mountProject();
   }
 
   async #save() {
@@ -120,11 +125,23 @@ export class AppLayout extends HTMLElement {
     this._main.innerHTML = `<div class="placeholder">Open or create a project to edit its database.${projectIoSupportsFSAccess ? '' : ' (Your browser lacks the File System Access API — Open/Save will use file picker + download instead of writing in place.)'}</div>`;
   }
 
-  #mountDatabase() {
+  #showTopTab(tab) {
+    this.#currentTopTab = tab;
+    if (!this.#project) return; // still on the placeholder, nothing mounted to toggle yet
+    const dbPane = this._main.querySelector('.database-pane');
+    const mapsPane = this._main.querySelector('.maps-pane');
+    if (dbPane) dbPane.hidden = tab !== 'Database';
+    if (mapsPane) mapsPane.hidden = tab !== 'Maps';
+  }
+
+  #mountProject() {
     this._main.innerHTML = `
-      <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+      <div class="database-pane" style="position:absolute;inset:0;display:flex;flex-direction:column;" ${this.#currentTopTab === 'Database' ? '' : 'hidden'}>
         <app-tabs class="db-tabs" tabs="${TAB_ORDER.map((k) => SCHEMAS[k].label).join(',')}" active="${SCHEMAS[TAB_ORDER[0]].label}"></app-tabs>
         <div style="flex:1;min-height:0;"><entity-editor style="height:100%;display:block;"></entity-editor></div>
+      </div>
+      <div class="maps-pane" style="position:absolute;inset:0;" ${this.#currentTopTab === 'Maps' ? '' : 'hidden'}>
+        <map-editor-view style="height:100%;display:block;"></map-editor-view>
       </div>
     `;
     const editor = this._main.querySelector('entity-editor');
@@ -136,6 +153,10 @@ export class AppLayout extends HTMLElement {
     this._main.querySelector('.db-tabs').addEventListener('tab-change', (e) => {
       editor.setEntityType(labelToKey[e.detail.tab]);
     });
+
+    const mapsView = this._main.querySelector('map-editor-view');
+    mapsView.modal = this._modal;
+    mapsView.project = this.#project;
   }
 }
 

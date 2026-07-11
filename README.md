@@ -14,7 +14,7 @@ Repo layout (per `hearthlight-gdd.md`, Part X decision):
 Locked decisions (2026-07-03): names as-is, 32px tiles, 4-directional movement,
 single-repo layout as above.
 
-## Status: Phase 4 (Hearthlight Studio A)
+## Status: Phase 5 (Hearthlight Studio B: map editor)
 
 Needs to be served over http(s), not opened via `file://` — the browser
 blocks `fetch()` of `project.json`/the tileset under the file protocol.
@@ -299,6 +299,106 @@ tab + live preview + playtest-in-iframe (Phase 6), Assets tab, weapon/armor
 equipment works, the trait half doesn't yet), and any schema validation
 beyond "is this JSON parseable."
 
-Next up (Phase 5, GDD Part IX): Hearthlight Studio B — the map editor
-(paint/layers/collision/events, undo). Exit test: build the Inn map
-entirely in-editor.
+### Phase 5: Hearthlight Studio B — map editor
+
+The Maps tab (GDD 6.1) is now live alongside Database, and both stay
+mounted at once — switching tabs just hides/shows a pane rather than
+tearing it down, so map-editor undo history and in-progress database
+edits both survive a tab switch.
+
+**Core editing model** (`studio/js/core/map-editor-model.js`,
+`studio/js/core/history.js`): the same split as the runtime's own
+modes-vs-components pattern — `MapEditorModel` is pure logic (paint,
+paintRect, floodFill, eyedropper, collision brush, event add/update/
+remove/lookup, resize with top-left anchoring and out-of-bounds event
+dropping), no DOM or canvas. Every mutating method returns
+`{apply(), revert()}`, pushed through a generic `HistoryStack`
+(undo/redo/canUndo/canRedo) that isn't map-specific — any future editor
+can reuse it.
+
+**Palette + canvas** (`studio/js/components/tileset-palette.js`,
+`studio/js/components/map-canvas.js`): `<tileset-palette>` renders the
+tileset image as a clickable/marquee-selectable grid. `<map-canvas>`
+owns the actual editing surface — six tools (paint, rectangle, fill,
+eyedropper, collision brush, event placement), four zoom presets
+(50/100/150/200%, not smooth wheel-zoom), Ctrl+Z/Ctrl+Y — and mirrors
+`map-scene.js`'s split by keeping all the editing logic in
+`MapEditorModel`, not the canvas component.
+
+**Command list editor** (`studio/js/components/command-list-editor.js`):
+GDD 6.1 calls for the same editor to serve both map event pages and, in
+Phase 6, whole VN scenes — both are just "an array of interpreter
+commands" (the same shared vocabulary from Phase 2). Built once, here,
+against the 19-command interpreter vocabulary; row-level expand/
+collapse, reorder, delete; `if` and `choice` recursively nest child
+`<command-list-editor>` instances for their `then`/`else`/per-option
+sub-lists.
+
+**Event editor** (`studio/js/components/event-editor-modal.js`):
+id/x/y/trigger/solid fields plus an arbitrary number of pages, each with
+flag/flagNot conditions and a mounted command-list-editor. No "sprite"
+field — events don't have one anywhere in the Part VII schema or the
+runtime (which draws a placeholder marker for any solid/action event),
+so this doesn't invent one.
+
+**Maps tab shell** (`studio/js/components/map-editor-view.js`): left
+pane (flat, sorted map list — Part VII's `maps.id` has no folder field,
+so "map list with folders" ships as a flat list rather than inventing
+schema the runtime wouldn't read — plus New Map and the tileset
+palette), center (tool/layer/zoom/collision-toggle/undo/redo toolbar
+over the canvas), right pane (name/size/tileset/music properties, with
+an Apply-size button that confirms first if shrinking would drop any
+events off the edge).
+
+Deferred, same "ship the simple version" valve used throughout this
+project: smooth wheel-zoom and click-drag pan (fixed zoom presets +
+scroll-container panning instead), map folders, and weapon/armor
+`trait` effects (still just the Phase 4 stat-bonus half).
+
+### Bugs found and fixed this phase
+
+- **Critical, pre-existing since Phase 4:** `app-layout.js` referenced
+  `this.#projectNameEl` (a private field) in `#openProject()` but had
+  only ever declared `this._projectNameEl` — a parse-time error that
+  broke the entire Studio shell on load, not just the Open Project
+  button. Never caught because the Phase 4 exit test drove
+  `<entity-editor>` directly rather than importing `<app-layout>`.
+  Fixed by using the already-declared `_projectNameEl` consistently.
+- Resizing a map called a full `loadMap()` reload purely to resize the
+  `<canvas>` element to match — which also cleared the undo/redo
+  history (and re-fetched the tileset) as an unwanted side effect.
+  `<map-canvas>` gained a `refreshCanvasSize()` method that just resizes
+  the element and redraws, leaving the model/history alone.
+- `<map-editor-view>`'s `project` setter never propagated to the
+  mounted `<map-canvas>`, so `loadMap()` threw on a null project the
+  first time any map was selected. Fixed to set `_canvas.project` too.
+- `blankCommand()` defaulted every non-number field — including
+  `json`-typed ones like `flag`'s `value` — to `''`. Since the
+  interpreter treats an absent `value` as `true` but a stored `''` as a
+  real (falsy) value, a freshly-added `flag` command that nobody
+  touched silently set the flag to `''` instead of `true`. Fixed by
+  leaving `json`-type fields absent by default, matching the "blank =
+  delete the key" behavior the field already has once a user edits it.
+
+Exit test: build "The Wanderer's Inn" entirely through the real Studio
+UI — New Map (prompted id), resize to 8×6 via the properties panel,
+rect-fill the floor, wall the room with the collision brush (the
+collision layer itself, independent of tile passability), paint a decor
+tile and prove undo/redo on it, place an event via the canvas's event
+tool and configure it through the real `<event-editor-modal>` +
+`<command-list-editor>` (a `flag` command and a `toast` command, zero
+hand-written JSON anywhere in the map or its event). Then feed that
+exact in-memory project object into a real `MapRuntime` and confirm it
+plays correctly: the player walks across the authored floor, is blocked
+by the collision-brushed wall, is blocked by the solid event, and
+interacting with the event actually runs its authored script (the flag
+gets set, the toast fires with the authored text). 23 assertions, plus
+120 more across the editor's individual pieces (model/history, canvas,
+command-list-editor, event-editor-modal, the Maps-tab wiring in
+app-layout) — 143 total, all green. `engine/` and `games/` are
+untouched this phase (diffed byte-identical against the pre-Phase-5
+tree), so the existing Phase 0–4 regression risk is effectively zero.
+
+Next up (Phase 6, GDD Part IX): Scenes tab (reusing
+`command-list-editor.js` for whole VN scenes) + live preview +
+playtest-in-iframe.
